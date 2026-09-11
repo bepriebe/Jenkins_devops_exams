@@ -108,28 +108,26 @@ References: [Docker image pinning](https://docs.docker.com/build/building/best-p
 [pip repeatable installs](https://pip.pypa.io/en/stable/topics/repeatable-installs/),
 [SQLAlchemy C extensions](https://docs.sqlalchemy.org/en/13/intro.html#installing-the-c-extensions).
 
-The existing Helm chart does not yet represent the complete application:
-it references a third-party image (`sajjadhz/fastapiapp:latest`), defines
-only one deployment, provides no databases or connection environment
-variables, assumes an existing `regcred`, and targets the unimplemented
-`/api/v1/checkapi` path in its probes and test.
-The fixed NodePort 30007 conflicts across multiple releases; environment
-labels and values for four environments are missing. The optional HPA
-template uses `autoscaling/v2beta1` and needs review/correction for the
-target cluster.
-Helm is not installed locally, so the initial `helm lint charts` and
-`helm template jenkins-exam charts` commands could not be executed.
+The Helm chart now renders two API Deployments and two ClusterIP Services,
+with environment labels, configurable image repositories/tags, and the real
+OpenAPI readiness/liveness paths. It has been linted and rendered for all
+four environments with the prefixed namespaces. The values still contain
+`CHANGE_ME` image repositories and database credential placeholders. It now
+also renders one PostgreSQL StatefulSet, headless Service, PVC, and placeholder
+Secret for each API; API Deployments read `DATABASE_URI` from those Secrets.
+Runtime Secret replacement, RBAC, and Jenkins stages are still separate.
+The old fixed NodePort and `/api/v1/checkapi` probes are removed. Helm 3.17.3
+was used for local validation.
 
 After the local smoke test, proceed with small milestones:
 
 1. Completed locally: verify application images with pinned build inputs and their own startup command.
-2. Configure the DockerHub destination and Jenkins credentials; use immutable tags.
-3. Correct, lint, and render the existing chart for both APIs, databases,
-   and four environments; prepare restricted exam-specific RBAC.
-4. Add a Declarative Jenkinsfile with checkout, tests, build, push, and
-   automatic deployment to `dev`, `qa`, and `staging`. Allow `prod` only
-   from the exact branch `master`, after manual approval in Jenkins.
-5. Demonstrate a complete pipeline run, rollouts, and HTTP checks;
+2. Completed locally: render two API workloads for `dev`, `qa`, `staging`, and `prod`.
+3. Configure the DockerHub destination and Jenkins credentials; use immutable tags.
+4. Add runtime Secret replacement and restricted exam-specific RBAC to the chart.
+5. Add Jenkins deployment stages for both APIs and databases,
+   automatically to `dev`, `qa`, and `staging`, and with manual approval for `prod`.
+6. Demonstrate a complete pipeline run, rollouts, and HTTP checks;
    prepare GitHub/DockerHub links, screenshots, a PDF, and a ZIP archive.
 
 Use lowercase `qa` because Kubernetes namespace names must be DNS-compliant.

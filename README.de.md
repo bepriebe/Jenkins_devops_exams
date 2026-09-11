@@ -110,26 +110,27 @@ Quellen: [Docker Image-Pinning](https://docs.docker.com/build/building/best-prac
 [pip Repeatable Installs](https://pip.pypa.io/en/stable/topics/repeatable-installs/),
 [SQLAlchemy C-Erweiterungen](https://docs.sqlalchemy.org/en/13/intro.html#installing-the-c-extensions).
 
-Der vorhandene Helm-Chart bildet die Anwendung noch nicht vollständig ab:
-ein fremdes Image (`sajjadhz/fastapiapp:latest`), nur ein Deployment,
-keine Datenbanken oder Verbindungsvariablen, ein vorausgesetztes `regcred`
-und Probes/Test gegen den nicht implementierten Pfad `/api/v1/checkapi`.
-Der feste NodePort 30007 kollidiert bei mehreren Releases; Environment-Labels
-und Values für vier Umgebungen fehlen. Die optionale HPA-Vorlage verwendet
-`autoscaling/v2beta1` und muss für den Zielcluster überprüft/korrigiert werden.
-Lokal fehlt Helm; die anfänglichen Aufrufe von `helm lint charts` und
-`helm template jenkins-exam charts` konnten deshalb nicht ausgeführt werden.
+Der Helm-Chart rendert jetzt zwei API-Deployments und zwei ClusterIP-Services
+mit Environment-Labels, konfigurierbaren Image-Repositories/Tags und den
+echten OpenAPI-Pfaden für Readiness/Liveness. Er wurde für alle vier
+Umgebungen mit den präfigierten Namespaces gelintet und gerendert. Die Values
+enthalten noch `CHANGE_ME`-Image-Repositories und Platzhalter für Datenbankzugänge.
+Er rendert jetzt außerdem pro API ein PostgreSQL-StatefulSet, einen Headless
+Service, eine PVC und ein Platzhalter-Secret; die API-Deployments beziehen
+`DATABASE_URI` aus diesen Secrets. Laufzeit-Secret-Ersetzung, RBAC-Regeln und
+Jenkins-Stages bleiben eigene Schritte. Der feste NodePort und die
+`/api/v1/checkapi`-Probes sind entfernt.
+Für die lokale Prüfung wurde Helm 3.17.3 verwendet.
 
 Nach dem lokalen Smoke-Test folgen kleine Meilensteine:
 
 1. Lokal abgeschlossen: Anwendungsimages mit fixierten Build-Eingaben und eigenem Startbefehl prüfen.
-2. DockerHub-Ziel und Jenkins-Credentials anbinden; unveränderliche Tags nutzen.
-3. Den vorhandenen Chart für beide APIs, Datenbanken und vier Umgebungen korrigieren,
-   linten und rendern; eingeschränktes Exam-RBAC vorbereiten.
-4. Declarative Jenkinsfile mit Checkout, Tests, Build, Push und automatischem
-   Deployment nach `dev`, `qa` und `staging` ergänzen. `prod` ausschließlich
-   für exakt `master` nach manueller Jenkins-Freigabe zulassen.
-5. Vollständigen Pipeline-Lauf, Rollouts und HTTP-Prüfungen nachweisen;
+2. Lokal abgeschlossen: Zwei API-Workloads für `dev`, `qa`, `staging` und `prod` rendern.
+3. DockerHub-Ziel und Jenkins-Credentials anbinden; unveränderliche Tags nutzen.
+4. Laufzeit-Secret-Ersetzung und eingeschränktes Exam-RBAC im Chart ergänzen.
+5. Jenkins-Stages für beide APIs und Datenbanken ergänzen: automatisch nach
+   `dev`, `qa`, `staging`, mit manueller Freigabe für `prod`.
+6. Vollständigen Pipeline-Lauf, Rollouts und HTTP-Prüfungen nachweisen;
    GitHub-/DockerHub-Links, Screenshots, PDF und ZIP vorbereiten.
 
 `qa` wird kleingeschrieben, weil Kubernetes-Namespace-Namen DNS-konform sein müssen.

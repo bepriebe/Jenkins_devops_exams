@@ -9,7 +9,7 @@ metadata:
 spec:
   containers:
     - name: wget
-      image: busybox
+      image: busybox:1.36
       command: ['wget']
-      args: ['{{ include "fastapiapp.fullname" . }}:{{ .Values.service.port }}/api/v1/checkapi']
+      args: ['-qO-', '{{ include "fastapiapp.serviceName" (dict "root" . "name" "cast") }}:8000/api/v1/casts/openapi.json']
   restartPolicy: Never

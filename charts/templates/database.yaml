@@ -1,0 +1,71 @@
+{{- range $name, $database := .Values.databases }}
+{{- if $database.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "fastapiapp.databaseServiceName" (dict "root" $ "name" $name) }}
+  labels:
+    {{- include "fastapiapp.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}-database
+spec:
+  clusterIP: None
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+  selector:
+    {{- include "fastapiapp.selectorLabels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}-database
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "fastapiapp.databaseServiceName" (dict "root" $ "name" $name) }}
+  labels:
+    {{- include "fastapiapp.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}-database
+spec:
+  serviceName: {{ include "fastapiapp.databaseServiceName" (dict "root" $ "name" $name) }}
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "fastapiapp.selectorLabels" $ | nindent 6 }}
+      app.kubernetes.io/component: {{ $name }}-database
+  template:
+    metadata:
+      labels:
+        {{- include "fastapiapp.selectorLabels" $ | nindent 8 }}
+        app.kubernetes.io/component: {{ $name }}-database
+        environment: {{ $.Values.environment | quote }}
+    spec:
+      containers:
+        - name: postgres
+          image: {{ $database.image | quote }}
+          ports:
+            - name: postgres
+              containerPort: 5432
+          envFrom:
+            - secretRef:
+                name: {{ include "fastapiapp.databaseSecretName" (dict "root" $ "name" $name) }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        labels:
+          {{- include "fastapiapp.labels" $ | nindent 10 }}
+          app.kubernetes.io/component: {{ $name }}-database
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ $database.storage }}
+---
+{{- end }}
+{{- end }}

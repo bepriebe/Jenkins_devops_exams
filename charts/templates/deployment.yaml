@@ -1,61 +1,82 @@
+{{- range $name, $service := .Values.services }}
+{{- if $service.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "fastapiapp.fullname" . }}
+  name: {{ include "fastapiapp.serviceName" (dict "root" $ "name" $name) }}
   labels:
-    {{- include "fastapiapp.labels" . | nindent 4 }}
+    {{- include "fastapiapp.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
 spec:
-  {{- if not .Values.autoscaling.enabled }}
-  replicas: {{ .Values.replicaCount }}
-  {{- end }}
+  replicas: {{ $service.replicaCount }}
   selector:
     matchLabels:
-      {{- include "fastapiapp.selectorLabels" . | nindent 6 }}
+      {{- include "fastapiapp.selectorLabels" $ | nindent 6 }}
+      app.kubernetes.io/component: {{ $name }}
   template:
     metadata:
-      {{- with .Values.podAnnotations }}
+      labels:
+        {{- include "fastapiapp.selectorLabels" $ | nindent 8 }}
+        app.kubernetes.io/component: {{ $name }}
+        environment: {{ $.Values.environment | quote }}
+      {{- with $.Values.podAnnotations }}
       annotations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      labels:
-        {{- include "fastapiapp.selectorLabels" . | nindent 8 }}
     spec:
-      {{- with .Values.imagePullSecrets }}
+      {{- with $.Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "fastapiapp.serviceAccountName" . }}
+      serviceAccountName: {{ include "fastapiapp.serviceAccountName" $ }}
       securityContext:
-        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+        {{- toYaml $.Values.podSecurityContext | nindent 8 }}
       containers:
-        - name: {{ .Chart.Name }}
+        - name: {{ $name }}
+          image: "{{ $service.repository }}:{{ $service.tag }}"
+          imagePullPolicy: {{ $service.pullPolicy }}
           securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+            {{- toYaml $.Values.securityContext | nindent 12 }}
           ports:
             - name: http
-              containerPort: 8000
+              containerPort: {{ $service.port }}
               protocol: TCP
+          env:
+            - name: DATABASE_URI
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "fastapiapp.databaseSecretName" (dict "root" $ "name" $service.database) }}
+                  key: DATABASE_URI
+            {{- range $key, $value := $service.env }}
+            - name: {{ $key }}
+              value: {{ if eq $key "CAST_SERVICE_HOST_URL" }}{{ printf "http://%s:8000/api/v1/casts/" (include "fastapiapp.serviceName" (dict "root" $ "name" "cast")) | quote }}{{ else }}{{ $value | quote }}{{ end }}
+            {{- end }}
           livenessProbe:
             httpGet:
-              path: /api/v1/checkapi
+              path: {{ $service.path }}
               port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
           readinessProbe:
             httpGet:
-              path: /api/v1/checkapi
+              path: {{ $service.path }}
               port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
           resources:
-            {{- toYaml .Values.resources | nindent 12 }}
-      {{- with .Values.nodeSelector }}
+            {{- toYaml $.Values.resources | nindent 12 }}
+      {{- with $.Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.affinity }}
+      {{- with $.Values.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.tolerations }}
+      {{- with $.Values.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+---
+{{- end }}
+{{- end }}
