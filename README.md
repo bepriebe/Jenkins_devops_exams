@@ -119,16 +119,28 @@ Runtime Secret replacement, RBAC, and Jenkins stages are still separate.
 The old fixed NodePort and `/api/v1/checkapi` probes are removed. Helm 3.17.3
 was used for local validation.
 
+`Jenkinsfile` is a Declarative Multibranch Pipeline skeleton. It validates
+Compose, builds both images, pushes immutable commit-SHA tags, and deploys
+the matching environment for branches `dev`, `qa`, and `staging`. The exact
+`master` branch pauses for manual production approval before deploying
+`jenkins-exam-prod`.
+Configure Jenkins Credentials with IDs `dockerhub-exam` (username/password
+or token) and `kubeconfig-exam` (Secret file) before enabling deployment
+stages. The DockerHub namespace remains a build parameter and is never stored
+in the repository. The pipeline uses `--create-namespace=false`; the RBAC
+bootstrap must therefore have been applied by an administrator first.
+
 After the local smoke test, proceed with small milestones:
 
 1. Completed locally: verify application images with pinned build inputs and their own startup command.
 2. Completed locally: render two API workloads for `dev`, `qa`, `staging`, and `prod`.
 3. Configure the DockerHub destination and Jenkins credentials; use immutable tags.
-4. Add runtime Secret replacement and restricted exam-specific RBAC to the chart.
+4. Apply and verify the restricted exam-specific RBAC bootstrap; replace placeholder runtime Secrets.
 5. Add Jenkins deployment stages for both APIs and databases,
    automatically to `dev`, `qa`, and `staging`, and with manual approval for `prod`.
 6. Demonstrate a complete pipeline run, rollouts, and HTTP checks;
    prepare GitHub/DockerHub links, screenshots, a PDF, and a ZIP archive.
 
 Use lowercase `qa` because Kubernetes namespace names must be DNS-compliant.
-The initial repository has no Jenkinsfile, exam-specific RBAC, or submission artifacts.
+The repository now contains the Jenkinsfile skeleton and exam-specific RBAC
+bootstrap. Submission artifacts and the first end-to-end Jenkins run are still missing.

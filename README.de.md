@@ -122,16 +122,28 @@ Jenkins-Stages bleiben eigene Schritte. Der feste NodePort und die
 `/api/v1/checkapi`-Probes sind entfernt.
 Für die lokale Prüfung wurde Helm 3.17.3 verwendet.
 
+Die `Jenkinsfile` ist ein Declarative-Multibranch-Pipeline-Grundgerüst.
+Sie validiert Compose, baut beide Images, pusht unveränderliche Commit-SHA-Tags
+und deployt für die Branches `dev`, `qa` und `staging` in die passende Umgebung.
+Der exakte Branch `master` hält vor dem Produktionsdeployment für eine manuelle
+Freigabe an und deployt danach nach `jenkins-exam-prod`.
+Vor der Aktivierung müssen Jenkins-Credentials mit den IDs `dockerhub-exam`
+(Benutzername/Token) und `kubeconfig-exam` (Secret-Datei) eingerichtet werden.
+Der DockerHub-Namespace ist ein Build-Parameter und wird nicht im Repository
+gespeichert. Die Pipeline verwendet `--create-namespace=false`; der RBAC-Bootstrap
+muss daher zuvor einmalig administrativ angewendet worden sein.
+
 Nach dem lokalen Smoke-Test folgen kleine Meilensteine:
 
 1. Lokal abgeschlossen: Anwendungsimages mit fixierten Build-Eingaben und eigenem Startbefehl prüfen.
 2. Lokal abgeschlossen: Zwei API-Workloads für `dev`, `qa`, `staging` und `prod` rendern.
 3. DockerHub-Ziel und Jenkins-Credentials anbinden; unveränderliche Tags nutzen.
-4. Laufzeit-Secret-Ersetzung und eingeschränktes Exam-RBAC im Chart ergänzen.
+4. Eingeschränktes Exam-RBAC anwenden und prüfen; Platzhalter für Laufzeit-Secrets ersetzen.
 5. Jenkins-Stages für beide APIs und Datenbanken ergänzen: automatisch nach
    `dev`, `qa`, `staging`, mit manueller Freigabe für `prod`.
 6. Vollständigen Pipeline-Lauf, Rollouts und HTTP-Prüfungen nachweisen;
    GitHub-/DockerHub-Links, Screenshots, PDF und ZIP vorbereiten.
 
 `qa` wird kleingeschrieben, weil Kubernetes-Namespace-Namen DNS-konform sein müssen.
-Jenkinsfile, Exam-RBAC und Abgabeartefakte fehlen im Ausgangsstand.
+Jenkinsfile-Grundgerüst und Exam-RBAC-Bootstrap sind jetzt enthalten.
+Abgabeartefakte und der erste vollständige Jenkins-Lauf fehlen noch.
