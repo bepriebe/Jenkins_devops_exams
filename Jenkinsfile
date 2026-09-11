@@ -11,7 +11,7 @@ pipeline {
     }
 
     environment {
-        DOCKERHUB_CREDENTIALS_ID = 'dockerhub-exam'
+        DOCKERHUB_CREDENTIALS_ID = 'dockerhub-jenkins-exam'
         KUBECONFIG_CREDENTIALS_ID = 'kubeconfig-exam'
     }
 

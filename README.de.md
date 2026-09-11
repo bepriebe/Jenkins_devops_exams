@@ -127,7 +127,7 @@ Sie validiert Compose, baut beide Images, pusht unveränderliche Commit-SHA-Tags
 und deployt für die Branches `dev`, `qa` und `staging` in die passende Umgebung.
 Der exakte Branch `master` hält vor dem Produktionsdeployment für eine manuelle
 Freigabe an und deployt danach nach `jenkins-exam-prod`.
-Vor der Aktivierung müssen Jenkins-Credentials mit den IDs `dockerhub-exam`
+Vor der Aktivierung müssen Jenkins-Credentials mit den IDs `dockerhub-jenkins-exam`
 (Benutzername/Token) und `kubeconfig-exam` (Secret-Datei) eingerichtet werden.
 Der DockerHub-Namespace ist ein Build-Parameter und wird nicht im Repository
 gespeichert. Die Pipeline verwendet `--create-namespace=false`; der RBAC-Bootstrap

@@ -124,7 +124,7 @@ Compose, builds both images, pushes immutable commit-SHA tags, and deploys
 the matching environment for branches `dev`, `qa`, and `staging`. The exact
 `master` branch pauses for manual production approval before deploying
 `jenkins-exam-prod`.
-Configure Jenkins Credentials with IDs `dockerhub-exam` (username/password
+Configure Jenkins Credentials with IDs `dockerhub-jenkins-exam` (username/password
 or token) and `kubeconfig-exam` (Secret file) before enabling deployment
 stages. The DockerHub namespace remains a build parameter and is never stored
 in the repository. The pipeline uses `--create-namespace=false`; the RBAC
