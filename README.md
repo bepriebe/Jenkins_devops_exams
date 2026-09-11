@@ -68,18 +68,45 @@ After updating to Uvicorn 0.33.0 / uvloop 0.22.1, the build, startup without
 `--loop asyncio`, smoke test, and `pip check` in both API containers passed
 again. Uvicorn's automatic loop configuration creates a `uvloop.Loop` in
 both containers.
-The `jenkins-exam-local` project remains running; test casts 1 and 2 are retained.
+The next image milestone also passed: both APIs start with the Dockerfile CMD,
+have no mounts, and their installed package versions match their lock files.
+The smoke test passed again after removing the source mounts and reload commands.
+The `jenkins-exam-local` project remains running; test casts 1, 2, and 3 are retained.
 This demonstrates local functionality; it is not yet Jenkins/Kubernetes evidence.
 
 ## Repository assessment and next exam steps
 
 Initial state: branch `master`, remote `git@github.com:bepriebe/Jenkins_devops_exams.git`.
-Two separate Docker build contexts are available. The Dockerfiles do not
-yet define a startup command; Compose supplies it, including development
-mode (`--reload` and source code bind mounts). Python 3.8, PostgreSQL 12.1,
-and the other direct Python dependencies come from the original course
-materials. Base images and transitive Python dependencies are not yet
-fully pinned; Nginx uses `latest`.
+Two separate Docker build contexts are available. Both Dockerfiles define
+an exec-form Uvicorn startup command on port 8000 without `--reload`.
+Compose uses that command and the source code included in the image;
+it no longer mounts application source directories. Rebuild the images
+after changing application code.
+
+The Python base image is pinned by SHA-256 digest. Each service has a
+`requirements.lock` containing the previously tested direct and transitive
+package versions. The build installs both `requirements.txt` and the lock
+file, so conflicting version changes fail instead of silently replacing
+a pinned dependency. It also runs `pip check`.
+Keep both files aligned when intentionally updating dependencies; validate
+the resulting images with the Compose smoke test and compare `pip freeze`
+with the lock file before accepting the update.
+
+The build uses the packaging tools from the pinned base image with
+`--no-build-isolation`. It no longer installs OS packages from a moving
+APT repository. SQLAlchemy's optional C extensions are disabled to avoid
+needing GCC; this may reduce result-processing performance, but preserves
+the Python implementation. Other native dependencies use available wheels
+on the tested Linux amd64 / Python 3.8 platform.
+Only the application directory and dependency files are copied into the images.
+
+This fixes base-image and package versions; it does not promise byte-identical
+image digests or hash-verified Python downloads. Builds still need access
+to DockerHub and PyPI. Python 3.8 and PostgreSQL 12.1 remain from the course
+setup, and Nginx still uses `latest`; a wider platform update is a separate step.
+References: [Docker image pinning](https://docs.docker.com/build/building/best-practices/#pin-base-image-versions),
+[pip repeatable installs](https://pip.pypa.io/en/stable/topics/repeatable-installs/),
+[SQLAlchemy C extensions](https://docs.sqlalchemy.org/en/13/intro.html#installing-the-c-extensions).
 
 The existing Helm chart does not yet represent the complete application:
 it references a third-party image (`sajjadhz/fastapiapp:latest`), defines
@@ -95,7 +122,7 @@ Helm is not installed locally, so the initial `helm lint charts` and
 
 After the local smoke test, proceed with small milestones:
 
-1. Prepare reproducible application images that can start independently.
+1. Completed locally: verify application images with pinned build inputs and their own startup command.
 2. Configure the DockerHub destination and Jenkins credentials; use immutable tags.
 3. Correct, lint, and render the existing chart for both APIs, databases,
    and four environments; prepare restricted exam-specific RBAC.
