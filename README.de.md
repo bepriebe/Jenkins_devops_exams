@@ -1,0 +1,106 @@
+# DATASCIENTEST JENKINS EXAM
+# python-microservice-fastapi
+Learn to build your own microservice using Python and FastAPI
+
+[English](README.md) | **Deutsch**
+
+Die englische Hauptversion ist für Kurs und Prüfungsabgabe vorgesehen.
+Technische Änderungen bitte in beiden Sprachversionen nachführen.
+
+## Lokaler Compose-Meilenstein
+
+Voraussetzungen: Docker mit Compose v2 (`up --wait`) und Python 3.
+Alle Befehle im Repository-Verzeichnis ausführen:
+
+```bash
+docker compose -p jenkins-exam-local config --quiet
+docker compose -p jenkins-exam-local up -d --build --wait --wait-timeout 180
+python3 tests/smoke.py
+docker compose -p jenkins-exam-local exec -T movie_service python -m pip check
+docker compose -p jenkins-exam-local exec -T cast_service python -m pip check
+docker compose -p jenkins-exam-local ps
+git diff --check
+```
+
+Nginx leitet Port 8080 an den Movie-Service (direkt: 8001) und den
+Cast-Service (direkt: 8002) weiter. Beide APIs verwenden intern Port 8000
+und jeweils eine PostgreSQL-Datenbank mit eigenem persistentem Volume.
+Der Movie-Service prüft Cast-IDs über den Cast-Service.
+Compose wartet vor dem API-Start auf bereite Datenbanken und vor dem
+Nginx-Start auf die API-Healthchecks. Der Cast-Healthcheck prüft die
+OpenAPI-Erreichbarkeit; den Datenbankzugriff prüft der Smoke-Test.
+Beide Services fixieren Uvicorn auf `0.33.0` und uvloop auf `0.22.1`.
+Damit entfällt der bisherige Workaround `--loop asyncio`; Uvicorn verwendet
+seine automatische Event-Loop-Auswahl. Uvicorn 0.11.2 scheiterte mit uvloop
+0.22.1 beim Start an `RuntimeError: There is no current event loop in thread
+'MainThread'`.
+
+Uvicorn verwendet seit 0.15.0 `asyncio.run()` zur Event-Loop-Verwaltung.
+0.33.0 ist die letzte Version mit Python-3.8-Unterstützung; ab 0.34.0
+entfällt diese Unterstützung. Dieses gezielte Update behält die übrigen
+direkten Anwendungsabhängigkeiten bei.
+Quelle: [Uvicorn Release Notes](https://uvicorn.dev/release-notes/).
+
+- Movie-Dokumentation: http://localhost:8080/api/v1/movies/docs
+- Cast-Dokumentation: http://localhost:8080/api/v1/casts/docs
+
+Der Smoke-Test prüft über Nginx beide Datenbanken, die serviceübergreifende
+Cast-Zuordnung und die Ablehnung einer unbekannten Cast-ID. Er entfernt
+seinen Testfilm. Pro Lauf bleibt ein eindeutig benannter Test-Cast zurück,
+weil die bereitgestellte API keinen Cast-DELETE-Endpunkt hat.
+Mit `BASE_URL=http://localhost:8080 python3 tests/smoke.py` kann die Zieladresse
+explizit gesetzt werden. Nur gegen eine dafür vorgesehene Testumgebung ausführen.
+
+Stoppen ohne Löschen der Daten:
+
+```bash
+docker compose -p jenkins-exam-local stop
+```
+
+Die vorhandenen Compose-Datenbankpasswörter sind lokale Kurs-Beispielwerte.
+Für spätere Deployments werden eigene Credentials zur Laufzeit benötigt.
+
+Lokal verifiziert am 11.09.2026: Beide Images gebaut, Compose-Konfiguration
+gültig, `up --wait` erfolgreich und `python3 tests/smoke.py` mit `PASS`
+abgeschlossen. Beide APIs und Datenbanken meldeten gesunde Healthchecks.
+Nach dem Update auf Uvicorn 0.33.0 / uvloop 0.22.1 erneut erfolgreich
+geprüft: Build und Start ohne `--loop asyncio`, Smoke-Test sowie `pip check`
+in beiden API-Containern. Uvicorns automatische Loop-Konfiguration erzeugt
+in beiden Containern einen `uvloop.Loop`.
+Das Projekt `jenkins-exam-local` läuft weiter; Test-Casts 1 und 2 bleiben erhalten.
+Dies ist ein lokaler Funktionsnachweis, noch kein Jenkins-/Kubernetes-Nachweis.
+
+## Bestandsaufnahme und nächste Prüfungsschritte
+
+Ausgangsstand: Branch `master`, Remote `git@github.com:bepriebe/Jenkins_devops_exams.git`.
+Zwei separate Docker-Build-Kontexte sind vorhanden. Die Dockerfiles enthalten
+noch keinen Startbefehl; Compose liefert ihn einschließlich Entwicklungsmodus
+(`--reload` und Quellcode-Bind-Mounts). Python 3.8, PostgreSQL 12.1 und die
+übrigen direkten Python-Abhängigkeiten stammen aus dem ursprünglichen Kursstand. Basis-Images
+und transitive Python-Abhängigkeiten sind noch nicht vollständig fixiert;
+Nginx verwendet `latest`.
+
+Der vorhandene Helm-Chart bildet die Anwendung noch nicht vollständig ab:
+ein fremdes Image (`sajjadhz/fastapiapp:latest`), nur ein Deployment,
+keine Datenbanken oder Verbindungsvariablen, ein vorausgesetztes `regcred`
+und Probes/Test gegen den nicht implementierten Pfad `/api/v1/checkapi`.
+Der feste NodePort 30007 kollidiert bei mehreren Releases; Environment-Labels
+und Values für vier Umgebungen fehlen. Die optionale HPA-Vorlage verwendet
+`autoscaling/v2beta1` und muss für den Zielcluster überprüft/korrigiert werden.
+Lokal fehlt Helm; die anfänglichen Aufrufe von `helm lint charts` und
+`helm template jenkins-exam charts` konnten deshalb nicht ausgeführt werden.
+
+Nach dem lokalen Smoke-Test folgen kleine Meilensteine:
+
+1. Eigenständig startbare, reproduzierbare Anwendungsimages vorbereiten.
+2. DockerHub-Ziel und Jenkins-Credentials anbinden; unveränderliche Tags nutzen.
+3. Den vorhandenen Chart für beide APIs, Datenbanken und vier Umgebungen korrigieren,
+   linten und rendern; eingeschränktes Exam-RBAC vorbereiten.
+4. Declarative Jenkinsfile mit Checkout, Tests, Build, Push und automatischem
+   Deployment nach `dev`, `qa` und `staging` ergänzen. `prod` ausschließlich
+   für exakt `master` nach manueller Jenkins-Freigabe zulassen.
+5. Vollständigen Pipeline-Lauf, Rollouts und HTTP-Prüfungen nachweisen;
+   GitHub-/DockerHub-Links, Screenshots, PDF und ZIP vorbereiten.
+
+`qa` wird kleingeschrieben, weil Kubernetes-Namespace-Namen DNS-konform sein müssen.
+Jenkinsfile, Exam-RBAC und Abgabeartefakte fehlen im Ausgangsstand.
