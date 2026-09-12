@@ -25,6 +25,8 @@ pipeline {
                     if (!env.IMAGE_NAMESPACE || env.IMAGE_NAMESPACE == 'CHANGE_ME') {
                         error('Set the DOCKERHUB_NAMESPACE build parameter before pushing images')
                     }
+                    env.IMAGE_MOVIE_REPOSITORY = "${env.IMAGE_NAMESPACE}/jenkins-exam-movie-service"
+                    env.IMAGE_CAST_REPOSITORY = "${env.IMAGE_NAMESPACE}/jenkins-exam-cast-service"
                 }
             }
         }
@@ -47,8 +49,8 @@ pipeline {
             steps {
                 sh '''#!/bin/sh
                     set -eu
-                    docker build -t "$IMAGE_NAMESPACE/movie-service:$IMAGE_TAG" movie-service
-                    docker build -t "$IMAGE_NAMESPACE/cast-service:$IMAGE_TAG" cast-service
+                    docker build -t "$IMAGE_MOVIE_REPOSITORY:$IMAGE_TAG" movie-service
+                    docker build -t "$IMAGE_CAST_REPOSITORY:$IMAGE_TAG" cast-service
                 '''
             }
         }
@@ -60,8 +62,8 @@ pipeline {
                     sh '''#!/bin/sh
                         set -eu
                         printf '%s' "$DOCKERHUB_TOKEN" | docker login --username "$DOCKERHUB_USER" --password-stdin
-                        docker push "$IMAGE_NAMESPACE/movie-service:$IMAGE_TAG"
-                        docker push "$IMAGE_NAMESPACE/cast-service:$IMAGE_TAG"
+                        docker push "$IMAGE_MOVIE_REPOSITORY:$IMAGE_TAG"
+                        docker push "$IMAGE_CAST_REPOSITORY:$IMAGE_TAG"
                         docker logout
                     '''
                 }
@@ -107,9 +109,9 @@ def deployExamEnvironment(String environment) {
                 --namespace "\$namespace" \\
                 --create-namespace=false \\
                 --set-string environment="${environment}" \\
-                --set-string services.movie.repository="\$IMAGE_NAMESPACE/movie-service" \\
+                --set-string services.movie.repository="\$IMAGE_MOVIE_REPOSITORY" \\
                 --set-string services.movie.tag="\$IMAGE_TAG" \\
-                --set-string services.cast.repository="\$IMAGE_NAMESPACE/cast-service" \\
+                --set-string services.cast.repository="\$IMAGE_CAST_REPOSITORY" \\
                 --set-string services.cast.tag="\$IMAGE_TAG" \\
                 --wait --timeout 10m
             kubectl rollout status --namespace "\$namespace" deployment/"\$release-fastapiapp-movie" --timeout=5m

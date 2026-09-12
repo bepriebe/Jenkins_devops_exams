@@ -125,7 +125,9 @@ was used for local validation.
 Compose, builds both images, pushes immutable commit-SHA tags, and deploys
 the matching environment for branches `dev`, `qa`, and `staging`. The exact
 `master` branch pauses for manual production approval before deploying
-`jenkins-exam-prod`.
+`jenkins-exam-prod`. Images are published as
+`<namespace>/jenkins-exam-movie-service` and
+`<namespace>/jenkins-exam-cast-service`.
 Configure Jenkins Credentials with IDs `dockerhub-jenkins-exam` (username/password
 or token) and `kubeconfig-exam` (Secret file) before enabling deployment
 stages. The DockerHub namespace remains a build parameter and is never stored
