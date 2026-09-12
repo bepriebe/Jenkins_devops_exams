@@ -130,9 +130,13 @@ the matching environment for branches `dev`, `qa`, and `staging`. The exact
 `<namespace>/jenkins-exam-cast-service`.
 Configure Jenkins Credentials with IDs `dockerhub-jenkins-exam` (username/password
 or token) and `kubeconfig-exam` (Secret file) before enabling deployment
-stages. The DockerHub namespace remains a build parameter and is never stored
-in the repository. The pipeline uses `--create-namespace=false`; the RBAC
+stages. Set the Jenkins environment variable `DOCKERHUB_NAMESPACE` to the
+DockerHub namespace; it is read from Jenkins and never stored in the repository.
+The pipeline uses `--create-namespace=false`; the RBAC
 bootstrap must therefore have been applied by an administrator first.
+
+In Jenkins, set it under **Manage Jenkins → System → Global properties →
+Environment variables** with name `DOCKERHUB_NAMESPACE` and value `bepriebe`.
 
 For `kubeconfig-exam`, keep the generated `./jenkins-exam-kubeconfig` in the
 project root, create a Jenkins **Secret file** credential with exactly that ID,

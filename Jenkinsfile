@@ -6,10 +6,6 @@ pipeline {
         disableConcurrentBuilds()
     }
 
-    parameters {
-        string(name: 'DOCKERHUB_NAMESPACE', defaultValue: 'CHANGE_ME', description: 'DockerHub namespace or organization')
-    }
-
     environment {
         DOCKERHUB_CREDENTIALS_ID = 'dockerhub-jenkins-exam'
         KUBECONFIG_CREDENTIALS_ID = 'kubeconfig-exam'
@@ -21,9 +17,9 @@ pipeline {
                 checkout scm
                 script {
                     env.IMAGE_TAG = sh(script: 'git rev-parse --short=12 HEAD', returnStdout: true).trim()
-                    env.IMAGE_NAMESPACE = params.DOCKERHUB_NAMESPACE.trim()
+                    env.IMAGE_NAMESPACE = (env.DOCKERHUB_NAMESPACE ?: '').trim()
                     if (!env.IMAGE_NAMESPACE || env.IMAGE_NAMESPACE == 'CHANGE_ME') {
-                        error('Set the DOCKERHUB_NAMESPACE build parameter before pushing images')
+                        error('Set the DOCKERHUB_NAMESPACE environment variable in Jenkins before pushing images')
                     }
                     env.IMAGE_MOVIE_REPOSITORY = "${env.IMAGE_NAMESPACE}/jenkins-exam-movie-service"
                     env.IMAGE_CAST_REPOSITORY = "${env.IMAGE_NAMESPACE}/jenkins-exam-cast-service"

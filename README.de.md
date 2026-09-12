@@ -132,9 +132,13 @@ Die Images werden als `<namespace>/jenkins-exam-movie-service` und
 `<namespace>/jenkins-exam-cast-service` veröffentlicht.
 Vor der Aktivierung müssen Jenkins-Credentials mit den IDs `dockerhub-jenkins-exam`
 (Benutzername/Token) und `kubeconfig-exam` (Secret-Datei) eingerichtet werden.
-Der DockerHub-Namespace ist ein Build-Parameter und wird nicht im Repository
-gespeichert. Die Pipeline verwendet `--create-namespace=false`; der RBAC-Bootstrap
-muss daher zuvor einmalig administrativ angewendet worden sein.
+Zusätzlich wird in Jenkins die Umgebungsvariable `DOCKERHUB_NAMESPACE` mit dem
+DockerHub-Namespace gesetzt. Sie wird aus Jenkins gelesen und nicht im Repository
+gespeichert. Die Pipeline verwendet `--create-namespace=false`; der
+RBAC-Bootstrap muss daher zuvor einmalig administrativ angewendet worden sein.
+In Jenkins wird sie unter **Jenkins verwalten → System → Globale Eigenschaften
+→ Umgebungsvariablen** mit dem Namen `DOCKERHUB_NAMESPACE` und dem Wert
+`bepriebe` angelegt.
 
 Für `kubeconfig-exam` bleibt die erzeugte Datei `./jenkins-exam-kubeconfig` im
 Projekt-Root liegen. In Jenkins wird dafür ein Credential vom Typ **Secret file**
