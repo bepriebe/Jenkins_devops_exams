@@ -115,7 +115,9 @@ four environments with the prefixed namespaces. The values still contain
 `CHANGE_ME` image repositories and database credential placeholders. It now
 also renders one PostgreSQL StatefulSet, headless Service, PVC, and placeholder
 Secret for each API; API Deployments read `DATABASE_URI` from those Secrets.
-Runtime Secret replacement, RBAC, and Jenkins stages are still separate.
+Runtime Secret replacement and Jenkins stages are still separate; the
+restricted RBAC bootstrap is now versioned under `k8s/` and has been applied
+to the isolated exam namespaces.
 The old fixed NodePort and `/api/v1/checkapi` probes are removed. Helm 3.17.3
 was used for local validation.
 
@@ -130,12 +132,18 @@ stages. The DockerHub namespace remains a build parameter and is never stored
 in the repository. The pipeline uses `--create-namespace=false`; the RBAC
 bootstrap must therefore have been applied by an administrator first.
 
+For `kubeconfig-exam`, keep the generated `./jenkins-exam-kubeconfig` in the
+project root, create a Jenkins **Secret file** credential with exactly that ID,
+and select this file. After Jenkins has stored it, remove the temporary copy on
+the k3s server with `ssh k3s-server 'rm -f /tmp/jenkins-exam-kubeconfig'`.
+The local file is ignored by Git and must never be committed.
+
 After the local smoke test, proceed with small milestones:
 
 1. Completed locally: verify application images with pinned build inputs and their own startup command.
 2. Completed locally: render two API workloads for `dev`, `qa`, `staging`, and `prod`.
 3. Configure the DockerHub destination and Jenkins credentials; use immutable tags.
-4. Apply and verify the restricted exam-specific RBAC bootstrap; replace placeholder runtime Secrets.
+4. Completed on k3s: apply and verify the restricted exam-specific RBAC bootstrap; replace placeholder runtime Secrets.
 5. Add Jenkins deployment stages for both APIs and databases,
    automatically to `dev`, `qa`, and `staging`, and with manual approval for `prod`.
 6. Demonstrate a complete pipeline run, rollouts, and HTTP checks;

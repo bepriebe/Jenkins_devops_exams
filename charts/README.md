@@ -8,8 +8,9 @@ immutable tags are supplied through `services.movie` and `services.cast`.
 
 The chart also renders one PostgreSQL StatefulSet, headless Service, PVC, and
 placeholder Secret for each API. API Deployments read their `DATABASE_URI`
-from the matching Secret. Runtime Secret replacement, RBAC, and Jenkins
-deployment stages remain separate follow-up steps.
+from the matching Secret. Runtime Secret replacement and Jenkins deployment
+stages remain separate follow-up steps; the exam RBAC bootstrap is documented
+in `k8s/README.md`.
 
 Example validation:
 

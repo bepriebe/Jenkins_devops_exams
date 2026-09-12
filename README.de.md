@@ -117,8 +117,9 @@ Umgebungen mit den präfigierten Namespaces gelintet und gerendert. Die Values
 enthalten noch `CHANGE_ME`-Image-Repositories und Platzhalter für Datenbankzugänge.
 Er rendert jetzt außerdem pro API ein PostgreSQL-StatefulSet, einen Headless
 Service, eine PVC und ein Platzhalter-Secret; die API-Deployments beziehen
-`DATABASE_URI` aus diesen Secrets. Laufzeit-Secret-Ersetzung, RBAC-Regeln und
-Jenkins-Stages bleiben eigene Schritte. Der feste NodePort und die
+`DATABASE_URI` aus diesen Secrets. Laufzeit-Secret-Ersetzung und Jenkins-Stages
+bleiben eigene Schritte; der eingeschränkte RBAC-Bootstrap ist unter `k8s/`
+dokumentiert und auf den isolierten Exam-Namespaces angewendet. Der feste NodePort und die
 `/api/v1/checkapi`-Probes sind entfernt.
 Für die lokale Prüfung wurde Helm 3.17.3 verwendet.
 
@@ -133,12 +134,19 @@ Der DockerHub-Namespace ist ein Build-Parameter und wird nicht im Repository
 gespeichert. Die Pipeline verwendet `--create-namespace=false`; der RBAC-Bootstrap
 muss daher zuvor einmalig administrativ angewendet worden sein.
 
+Für `kubeconfig-exam` bleibt die erzeugte Datei `./jenkins-exam-kubeconfig` im
+Projekt-Root liegen. In Jenkins wird dafür ein Credential vom Typ **Secret file**
+mit exakt dieser ID angelegt und diese Datei ausgewählt. Nachdem Jenkins die
+Datei gespeichert hat, wird die temporäre Kopie auf dem k3s-Server gelöscht:
+`ssh k3s-server 'rm -f /tmp/jenkins-exam-kubeconfig'`. Die lokale Datei ist in
+Git ignoriert und darf niemals committed werden.
+
 Nach dem lokalen Smoke-Test folgen kleine Meilensteine:
 
 1. Lokal abgeschlossen: Anwendungsimages mit fixierten Build-Eingaben und eigenem Startbefehl prüfen.
 2. Lokal abgeschlossen: Zwei API-Workloads für `dev`, `qa`, `staging` und `prod` rendern.
 3. DockerHub-Ziel und Jenkins-Credentials anbinden; unveränderliche Tags nutzen.
-4. Eingeschränktes Exam-RBAC anwenden und prüfen; Platzhalter für Laufzeit-Secrets ersetzen.
+4. Auf k3s abgeschlossen: eingeschränktes Exam-RBAC anwenden und prüfen; Platzhalter für Laufzeit-Secrets ersetzen.
 5. Jenkins-Stages für beide APIs und Datenbanken ergänzen: automatisch nach
    `dev`, `qa`, `staging`, mit manueller Freigabe für `prod`.
 6. Vollständigen Pipeline-Lauf, Rollouts und HTTP-Prüfungen nachweisen;
